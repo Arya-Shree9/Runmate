@@ -1,32 +1,59 @@
 <?php
-if(isset($_POST['name'])){
-    $server = "localhost";
-    $username = "root";
-    $password = "";
-
-    $con = mysqli_connect($server, $username, $password);
-
-    if(!$con){
-        die("Connection failed: " . mysqli_connect_error());
-    }
-    
+session_start();
+// Registration handling
+if (isset($_POST['register'])) {
     $name = $_POST['name'];
     $age = $_POST['age'];
     $email = $_POST['email'];
-    $password = $_POST['password'];
-    $sql ="INSERT INTO `users`.`users` (`name`, `age`, `email`, `password`) VALUES ('$name', '$age', '$email', '$password');";
+    $raw_password = $_POST['password'];
+    $hashed_password = password_hash($raw_password, PASSWORD_DEFAULT);
 
-    
-
-    if($con->query($sql)== true){
-       // echo "successfully inserted";
-    }else{
-        echo "error";
+    $check = "SELECT * FROM users WHERE email='$email'";
+    $result = mysqli_query($con, $check);
+    if (mysqli_num_rows($result) > 0) {
+        $error = "Email already registered!";
+    } else {
+        $sql = "INSERT INTO users (name, age, email, password) VALUES ('$name', '$age', '$email', '$hashed_password')";
+        if ($con->query($sql) === TRUE) {
+            $_SESSION['username'] = $name;
+            header("Location: registration.php");
+            exit;
+        } else {
+            $error = "Error: " . $con->error;
+        }
     }
-    $con->close();
+}
 
+// Login handling
+if (isset($_POST['login'])) {
+    $email = $_POST['email'];
+    $raw_password = $_POST['password'];
+
+    $query = "SELECT * FROM users WHERE email='$email'";
+    $result = mysqli_query($con, $query);
+
+    if ($result && mysqli_num_rows($result) == 1) {
+        $row = mysqli_fetch_assoc($result);
+        if (password_verify($raw_password, $row['password'])) {
+            $_SESSION['username'] = $row['name'];
+            header("Location: registration.php");
+            exit;
+        } else {
+            $error = "Incorrect password!";
+        }
+    } else {
+        $error = "No account found with that email.";
+    }
+}
+
+if (isset($_GET['logout'])) {
+    session_unset();
+    session_destroy();
+    header("Location: registration.php");
+    exit;
 }
 ?>
+
 
 
 <!DOCTYPE html>
